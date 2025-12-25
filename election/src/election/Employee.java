@@ -1,8 +1,6 @@
 package election;
 
-import electionException.InvalidCandidateException;
-import electionException.InvalidPollException;
-import electionException.NoPollException;
+import electionException.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,9 +10,11 @@ public class Employee {
     private String name;
     private String id;
     private List<Poll> unvotedPolls;
+    private List<Notification> notifications;
 
     public Employee(String name, String id) {
         unvotedPolls = new ArrayList<>();
+        notifications = new ArrayList<>();
         this.name = name;
         this.id = id;
     }
@@ -83,8 +83,23 @@ public class Employee {
         return id;
     }
 
-    public void viewOngoingPollingResult(){
+    public  void viewNotificatons(int notificationNumber){
+        validateNotificationNumber(notificationNumber);
+         System.out.println(notifications.get(notificationNumber - 1));
+    }
+    public void deleteNotifications(int notificationNumber){
+        validateNotificationNumber(notificationNumber);
+        notifications.remove(notificationNumber - 1);
 
+    }
+
+    public int getNumberOfNotification() {
+        return notifications.size();
+    }
+
+    private void validateNotificationNumber(int number) {
+        if(getNumberOfNotification() == 0) throw new InvalidNotificationNumber();
+        if(number < 1 || number > getNumberOfNotification()) throw new InvalidNotificationNumber();
     }
 
     public void viewUnvotedPoll(){
@@ -103,5 +118,31 @@ public class Employee {
     public void addToUnvotedPolls(Poll poll){
         unvotedPolls.add(poll);
     }
+
+    public void addToNotification(Notification notification){
+        notifications.add(notification);
+    }
+
+    public List<Notification> getNotifications() {
+        return notifications;
+    }
+
+    public void deleteUnvotedPolls(String nameOfPoll){
+        Poll getPoll = findPoll(nameOfPoll);
+        if(getPoll != null) unvotedPolls.remove(getPoll);
+    }
+
+    public List<Poll> getUnvotedPolls() {
+        return unvotedPolls;
+    }
+
+    public String login(String name, String employeeId){
+        validate(name, employeeId);
+        return "You have successfully login " + name;
+    }
+    private void validate(String name, String employeeId){
+        if(!name.equals(this.name) || !employeeId.equals(this.id)) throw new InvalidLoginDetailsException();
+
+        }
 
 }

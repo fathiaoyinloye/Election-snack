@@ -11,7 +11,6 @@ public class Company {
     public Company(){
         employees = new ArrayList<>();
 
-
     }
     public String getName() {
         return name;
@@ -43,6 +42,8 @@ public class Company {
     public void setAdmin(Admin admin) {
         this.admin = admin;
     }
+
+
 
     public ArrayList<Employee> getEmployees() {
 

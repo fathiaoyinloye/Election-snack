@@ -1,10 +1,8 @@
 import election.Admin;
 import election.Company;
 import election.Employee;
-import electionException.InvalidCandidateException;
-import electionException.InvalidNoOfEmployees;
-import electionException.InvalidPassword;
-import electionException.InvalidPollException;
+import electionException.*;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -17,6 +15,12 @@ public class AdminTest {
     void setup() {
         admin = Admin.getAdmin();
     }
+
+    @AfterEach
+            void teardown(){
+        admin.deleteAllAdminData();
+    }
+
 
     @Test
     public void testThatOnlyOneInstanceOfAdminCanBeCreated() {
@@ -36,13 +40,22 @@ public class AdminTest {
         assertEquals("3256", admin.getPassword());
 
     }
+    @Test
+    public void testThatAdminCannotLoginWithIncorrectPassword() {
+        Admin admin = Admin.getAdmin();
+        admin.setName("Fathia");
+        assertEquals("Fathia", admin.getName());
+        assertThrows(InvalidLoginDetailsException.class, () -> admin.login("Fathia", "1231"));
+
+    }
+
 
     @Test
     public void testThatAdminTryToChangePasswordWithInvalidOldPassword_throwInvalidPasswordException() {
         Admin admin = Admin.getAdmin();
         admin.setName("Fathia");
         assertEquals("Fathia", admin.getName());
-        assertThrows(InvalidPassword.class , () -> admin.changePassword("780", "3256"));
+        assertThrows(InvalidPasswordException.class , () -> admin.changePassword("780", "3256"));
 
     }
     @Test
@@ -98,7 +111,7 @@ public class AdminTest {
         admin.addEmployee(company, names, 4);
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
 
 
@@ -113,7 +126,7 @@ public class AdminTest {
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
         admin.viewPoll();
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
     }
 
@@ -126,8 +139,8 @@ public class AdminTest {
         admin.addEmployee(company, names, 4);
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
-        assertThrows(InvalidPollException.class, ()-> admin.deletePoll("Best"));
-        admin.deletePoll("Best Staff");
+        assertThrows(InvalidPollException.class, ()-> admin.deletePoll("Best", company));
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
     }
 
@@ -141,7 +154,7 @@ public class AdminTest {
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
         employees[0].castAVote("Best Staff","Tayo", admin);
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
     }
 
@@ -155,7 +168,7 @@ public class AdminTest {
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
         assertThrows(InvalidCandidateException.class, () -> employees[0].castAVote("Best Staff","ayo", admin));
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
     }
 
@@ -170,7 +183,7 @@ public class AdminTest {
         admin.createPoll("Best Staff", 2, candidateNames, company);
         assertEquals(1, admin.getNoOfPolls());
         assertThrows(InvalidPollException.class, () -> employees[0].castAVote("Best","Tayo", admin));
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(0, admin.getNoOfPolls());
     }
 
@@ -185,12 +198,127 @@ public class AdminTest {
         admin.createPoll("Fastest", 2, candidateNames, company);
         assertEquals(2, admin.getNoOfPolls());
         //employees[0].viewUnvotedPoll();
-        admin.deletePoll("Best Staff");
+        admin.deletePoll("Best Staff", company);
         assertEquals(1, admin.getNoOfPolls());
-        admin.deletePoll("Fastest");
+        admin.deletePoll("Fastest", company);
         assertEquals(0, admin.getNoOfPolls());
 
 
     }
+
+    @Test
+    public void testThatAdminDeletePoll_PollGotDeletedForEmployee(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        admin.createPoll("Fastest", 2, candidateNames, company);
+        assertEquals(2, admin.getNoOfPolls());
+        admin.deletePoll("Best Staff", company);
+        assertEquals(1, employees[1].getUnvotedPolls().size());
+        assertEquals(1, admin.getNoOfPolls());
+        admin.deletePoll("Fastest", company);
+        assertEquals(0, admin.getNoOfPolls());
+
+
+    }
+    @Test
+    public void testThatAdminAddAPoll_EmployeeGotNotifies(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        admin.createPoll("Fastest", 2, candidateNames, company);
+        assertEquals(2, employees[1].getNotifications().size());
+        assertEquals(2, admin.getNoOfPolls());
+        admin.deletePoll("Best Staff", company);
+        assertEquals(1, employees[1].getUnvotedPolls().size());
+        assertEquals(1, admin.getNoOfPolls());
+        admin.deletePoll("Fastest", company);
+        assertEquals(0, admin.getNoOfPolls());
+    }
+
+    @Test
+    public void testThatAdminAddAPoll_EmployeeGotNotifies_EmployeeViewsNotification(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        admin.createPoll("Fastest", 2, candidateNames, company);
+        assertEquals(2, employees[1].getNotifications().size());
+        employees[1].viewNotificatons(1);
+        assertEquals(2, admin.getNoOfPolls());
+        admin.deletePoll("Best Staff", company);
+        assertEquals(1, employees[1].getUnvotedPolls().size());
+        admin.deletePoll("Fastest", company);
+        assertEquals(0, admin.getNoOfPolls());
+    }
+
+
+    @Test
+    public void testThatAdminAddAPoll_EmployeeGotNotifies_AdminDeletePoll_EmployeeGetsPollResult(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        employees[0].castAVote("Best Staff", "Bola", admin);
+        admin.createPoll("Fastest", 2, candidateNames, company);
+        assertEquals(2, employees[1].getNotifications().size());
+        admin.deletePoll("Best Staff", company);
+        employees[1].viewNotificatons(3);
+        assertEquals(1, employees[1].getUnvotedPolls().size());
+        admin.deletePoll("Fastest", company);
+        assertEquals(0, admin.getNoOfPolls());
+    }
+
+    @Test
+    public void testThatAdminAddAPoll_EmployeeGot1Notification_ViewNotification2_throwsError(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        employees[0].castAVote("Best Staff", "Bola", admin);
+        assertEquals(1, employees[1].getNotifications().size());
+        assertThrows(InvalidNotificationNumber.class, () -> employees[1].viewNotificatons(2));
+        admin.deletePoll("Best Staff", company);
+        assertEquals(0, admin.getNoOfPolls());
+    }
+    @Test
+    public void testThatAdminAddAPoll_EmployeeGot1Notification_EmployeeDeleteNotification(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        admin.createPoll("Best Staff", 2, candidateNames, company);
+        employees[0].castAVote("Best Staff", "Bola", admin);
+        assertEquals(1, employees[1].getNotifications().size());
+        employees[1].deleteNotifications(1);
+        assertEquals(0, employees[1].getNotifications().size());
+        admin.deletePoll("Best Staff", company);
+        assertEquals(0, admin.getNoOfPolls());
+    }
+
+    @Test
+    public void testThatAdminAddEmployee_EmployeeTryToViewAnEmptyNotification_throwsException(){
+        Company company = new Company();
+        assertEquals(0, admin.getNoOfPolls());
+        String[] candidateNames = {"Bola", "Tayo"};
+        String[] names = {"Fathia","Omotemmy", "Bola", "Bayo"};
+        Employee[] employees = admin.addEmployee(company, names, 4);
+        assertEquals(0, employees[0].getNotifications().size());
+        assertThrows(InvalidNotificationNumber.class, () -> employees[1].viewNotificatons(1));
+    }
 }
+
 

@@ -1,9 +1,6 @@
 package election;
 
-import electionException.InvalidNoOfEmployees;
-import electionException.InvalidPassword;
-import electionException.InvalidPollException;
-import electionException.NoPollException;
+import electionException.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -19,6 +16,7 @@ public class Admin {
         polls = new ArrayList<>();
         pollResult = new ArrayList<>();
         password = "1234";
+        name = "default";
 
     }
 
@@ -27,6 +25,15 @@ public class Admin {
             onlyInstance = new Admin();
         return onlyInstance;
 
+    }
+
+    public String login(String name, String password) {
+        validate(name, password);
+        return "You Have Successfully Login";
+    }
+
+    private void validate(String name, String password){
+        if(!name.equals(this.name) || !password.equals(this.password)) throw new InvalidLoginDetailsException();
     }
 
 
@@ -44,7 +51,7 @@ public class Admin {
 
     public void changePassword(String oldPassword, String newPassword) {
         if(oldPassword.equals(password))     this.password = newPassword;
-        else throw new InvalidPassword();
+        else throw new InvalidPasswordException();
 
     }
 
@@ -64,13 +71,18 @@ public class Admin {
         return employees;
     }
     public void createPoll(String name, int noOfCandidate, String[] candidates, Company company){
+        if(company.getEmployees().isEmpty()) throw new NoEmployeeException();
         Poll poll = new Poll(name, noOfCandidate);
         poll.setCandidates(candidates);
         polls.add(poll);
         pollResult.add(new int[noOfCandidate]);
         int noOfEmployee = company.getNoOfEmployees();
+       Notification notification = sendPollNotification(poll, true);
         for(int count = 0; count < noOfEmployee; count++){
             company.getEmployees().get(count).addToUnvotedPolls(poll);
+            company.getEmployees().get(count).addToNotification(notification);
+
+
         }
     }
 
@@ -81,12 +93,36 @@ public class Admin {
         return -1;
     }
 
-    public void deletePoll(String name ){
+    public void deletePoll(String name, Company company){
         validate(name);
+        int[] result = pollResult.get(getIndex((name)));
+        StringBuilder output = getResult(getPoll(name), result);
+        Notification notification = new Notification(getPoll(name), false);
+        notification.setResult(output);
         pollResult.remove(getIndex(name));
+        int noOfEmployee = company.getNoOfEmployees();
+        for(int count = 0; count < noOfEmployee; count++){
+            company.getEmployees().get(count).deleteUnvotedPolls(name);
+            company.getEmployees().get(count).addToNotification(notification);
+
+
+        }
         polls.remove(getIndex(name));
 
     }
+
+    private Poll getPoll(String name){
+        return polls.get(getIndex(name));
+    }
+
+    private StringBuilder getResult(Poll poll, int[] result){
+        StringBuilder output = new StringBuilder();
+        for(int count = 0; count < result.length; count++ ){
+            output.append(poll.getCandidates()[count] + " Vote is: " + result[count] + " \n");
+        }
+        return output;
+    }
+
     private void validate(String name){
         if(getIndex(name) == -1) throw new InvalidPollException();
     }
@@ -95,8 +131,12 @@ public class Admin {
 
 
     }
-    public void sendPollNotification(){
+    public Notification sendPollNotification(Poll poll, boolean addNewPoll){
+        return new Notification(poll, addNewPoll);
 
+
+    }
+    public void sendPollResult(){
 
     }
 
@@ -114,6 +154,10 @@ public class Admin {
 public int getNoOfPolls(){
         return polls.size();
 }
-
+public  void deleteAllAdminData(){
+        this.name = "default";
+        this.password = "1234";
+        if(!polls.isEmpty()) {polls.clear(); pollResult.clear();}
+}
 
 }
