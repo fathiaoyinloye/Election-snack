@@ -136,9 +136,7 @@ public class Admin {
 
 
     }
-    public void sendPollResult(){
 
-    }
 
     public void viewPoll(){
         if(polls.isEmpty()) throw new NoPollException();

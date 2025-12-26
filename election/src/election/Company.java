@@ -53,4 +53,11 @@ public class Company {
     public void setEmployees(ArrayList<Employee> employees) {
         this.employees = employees;
     }
+
+
+   /* public void getEmployee(String employeeId){
+        return employees.get()
+    }*/
 }
+
+
